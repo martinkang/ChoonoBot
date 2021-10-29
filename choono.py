@@ -120,6 +120,28 @@ async def getLastDayStars():
                 break
 
         return
+ 
+@gBot.command(name='토너', aliases=['stars', '별'], brief=['토너 별'] )
+async def getLastDayStarsCmd( aCtx: context ):
+    print("getLastDayStarsCmd")
+    sOutputEmbed = None
+    
+    async with aCtx.typing():
+        sNow = _time.get_utc_now()
+        if _time.isTourneyStart():
+            sDivisionStars = await pss_tournament.getOnlineDivisionStarsData()
+            sFleetDatas = pss_tournament.getOnlineFleetIDs( sDivisionStars )
+
+            sKey = await _func.get_access_key()
+            for sFleetData in sFleetDatas:
+                if sFleetData[0] == 1:
+                    sFleetName, sOutputEmbed = await pss_tournament.getStarsEachFleet( sKey, sFleetData[1], sNow )
+                    sEmb = discord.Embed(title=f'{sFleetName} Stars Score', description=sOutputEmbed, color=0x00aaaa)   
+                    await aCtx.send(embed=sEmb)
+                else:
+                    break
+        
+    return
         
    
 @gBot.event
@@ -152,7 +174,6 @@ async def on_ready():
     sched = AsyncIOScheduler(timezone='UTC')
     sched.start()
     sched.add_job( getLastDayStars, 'cron', hour='23', minute='55', id="touney_save" )
-    sched.add_job( chaseListUsers, 'interval', minutes=3 )
     print( 'Tourney Schedule Start' )
     
 
