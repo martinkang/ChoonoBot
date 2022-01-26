@@ -1,6 +1,7 @@
 import sys
 from asyncio.tasks import sleep
 from typing import Dict, List
+from xml.etree.ElementTree import tostring
 
 # --------------- Utils ---------------
 from utils import functions as _func
@@ -23,7 +24,7 @@ from discord.ext import commands
 from discord.ext.commands import context
 from utils import time as _time
 
-
+import openpyxl
 
 import pss_tournament 
 
@@ -111,36 +112,97 @@ async def getLastDayStars():
         sFleetDatas = pss_tournament.getOnlineFleetIDs( sDivisionStars )
 
         sKey = await _func.get_access_key()
+        
+        sNo = 0
+        sDiv = 0
+        sA_No = 0
+        sD_No = 0
+            
         for sFleetData in sFleetDatas:
             if sFleetData[0] == 1:
-                sFleetName, sOutputEmbed = await pss_tournament.getStarsEachFleet( sKey, sFleetData[1], sNow )
-                sEmb = discord.Embed(title=f'{sFleetName} Stars Score', description=sOutputEmbed, color=0x00aaaa)   
+                sDiv = 1
+                sA_No = sA_No + 1
+                sNo = sA_No
+                    
+                sFleetName, sOutputEmbed = await pss_tournament.getStarsEachFleet( None, None, None, 
+                                                                                  sKey, sFleetData[1], sNow, False )
+                sEmb = discord.Embed(title=f'[A]-{sA_No} {sFleetName} Stars Score', description=sOutputEmbed, color=0x00aaaa)   
                 await sChannel.send(embed=sEmb)
-            else:
+            elif sFleetData[0] == 4:   
+                sDiv = 4
+                sD_No = sD_No + 1
+                sNo = sD_No
+                
+                sFleetName, sOutputEmbed = await pss_tournament.getStarsEachFleet( None, None, None, 
+                                                                                    sKey, sFleetData[1], sNow, False )
+                sEmb = discord.Embed(title=f'[D]-{sD_No} {sFleetName} Stars Score', description=sOutputEmbed, color=0x00aaaa)   
+                await sChannel.send(embed=sEmb)  
+                
+            if sA_No == 12 or sD_No == 12:
                 break
 
         return
  
 @gBot.command(name='토너', aliases=['stars', '별'], brief=['토너 별'] )
 async def getLastDayStarsCmd( aCtx: context ):
-    print("getLastDayStarsCmd")
     sOutputEmbed = None
     
     async with aCtx.typing():
         sNow = _time.get_utc_now()
         if _time.isTourneyStart():
+            sNowString = f'{sNow}'
+            sFileName = f'{sNowString[0:10]}_Stars_Score.xlsx'
+            sWB = openpyxl.Workbook()
+            sADivSheet = sWB.active
+            sADivSheet.title = "A Division"
+            sDDivSheet = sWB.create_sheet( "D Division")
+            
+            # sDivisionStars
+            # {토너리그, [{리그 함대정보}, ... ]
             sDivisionStars = await pss_tournament.getOnlineDivisionStarsData()
+           
+            # sFleetDatas 
+            # { 리그, 함대ID, Star Score } - 점수별 정렬
+            # 리그 1 - 4 : A - D 리그
             sFleetDatas = pss_tournament.getOnlineFleetIDs( sDivisionStars )
-
+           
             sKey = await _func.get_access_key()
+            
+            sNo = 0
+            sDiv = 0
+            sA_No = 0
+            sD_No = 0
             for sFleetData in sFleetDatas:
-                if sFleetData[0] == 1:
-                    sFleetName, sOutputEmbed = await pss_tournament.getStarsEachFleet( sKey, sFleetData[1], sNow )
-                    sEmb = discord.Embed(title=f'{sFleetName} Stars Score', description=sOutputEmbed, color=0x00aaaa)   
+                sDiv = sFleetData[0]
+                if sDiv == 1 :
+                    sA_No = sA_No + 1
+                    sNo = sA_No
+                      
+                elif sDiv == 4 :
+                    sD_No = sD_No + 1
+                    sNo = sD_No
+                
+                if sDiv == 1 or sDiv == 4:
+                    sFleetName, sOutputEmbed = await pss_tournament.getStarsEachFleet( sWB, 
+                                                                                sDiv,
+                                                                                sNo,
+                                                                                sKey, 
+                                                                                sFleetData[1], 
+                                                                                sNow, 
+                                                                                True )
+                
+                    sEmb = discord.Embed(title=f'[{sDiv}]-{sNo} {sFleetName} Stars Score', description=sOutputEmbed, color=0x00aaaa)
                     await aCtx.send(embed=sEmb)
-                else:
+                
+                if sA_No == 12 or sD_No == 12:
                     break
-        
+                
+            # sWB.save( sFileName )
+            
+            # sFile = discord.File( "./" + sFileName)
+            # await aCtx.send(file=sFile)
+            
+
     return
         
    
@@ -173,7 +235,8 @@ async def on_ready():
     
     sched = AsyncIOScheduler(timezone='UTC')
     sched.start()
-    sched.add_job( getLastDayStars, 'cron', hour='23', minute='55', id="touney_save" )
+    # sched.add_job( getLastDayStars, 'cron', hour='17', minute='17', id="touney_save" )
+    sched.add_job( getLastDayStars, 'cron', hour='23', minute='53', id="touney_save" )
     print( 'Tourney Schedule Start' )
     
 

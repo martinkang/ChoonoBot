@@ -335,7 +335,7 @@ async def selectCountTourneyFleetData( aYear: int, aMonth: int ):
     return sSuccess, sTourneyFleetCount
 
 
-def getTourneyScores( aUser: _type.EntityInfo ):
+def getTourneyScores( aUser: _type.EntityInfo, aTest: bool ):
     sUserID            = aUser['Id']
     sUserName          = getEntityData( aUser, 'Name', _type.STR_TYPE )
     sTrophy            = getEntityData( aUser, 'Trophy', _type.INT_TYPE )
@@ -348,8 +348,11 @@ def getTourneyScores( aUser: _type.EntityInfo ):
     else:
         sGetStars = sDivStarScore
 
-
-    sData = f'{_emojis.star}{sGetStars} / {sUserName} / {_emojis.trophy}{sTrophy}'
+    if aTest == True:
+        sData = f'{_emojis.star}{sGetStars}({sStarScore}) / {sUserName} / {_emojis.trophy}{sTrophy}'
+    else:
+        sData = f'{_emojis.star}{sGetStars} / {sUserName} / {_emojis.trophy}{sTrophy}'
+        
     return sGetStars, sData
     
 

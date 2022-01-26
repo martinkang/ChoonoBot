@@ -1,0 +1,7 @@
+
+*.pyc
+.pss.env
+client_secrets.json
+settings.yaml
+conf/db.conf
+README.md

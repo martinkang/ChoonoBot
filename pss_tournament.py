@@ -18,6 +18,8 @@ ALLOWED_DIVISION_LETTERS: List[str] = sorted([letter for letter in lookups.DIVIS
 DIVISION_DESIGN_DESCRIPTION_PROPERTY_NAME: str = 'DivisionName'
 DIVISION_DESIGN_KEY_NAME: str = 'DivisionDesignId'
 
+EXCEL_FLEET_NUM: int = 7
+
 
 
 def isDivisionLetter( aStr: str ) -> bool:
@@ -100,9 +102,17 @@ def getOnlineFleetIDs( aDivisionStars ):
 
 
 
-async def getStarsEachFleet( aKey, aFleetID, aNow ):
+async def getStarsEachFleet( aWB, aDiv, aNo, aKey, aFleetID, aNow, aTest ):
     sPath = await _path.__get_search_fleet_users_base_path( aKey, aFleetID )
-    sRawData = await _func.get_data_from_path( sPath )
+    sRawData = None
+    
+    while sRawData is None:
+        sRawData = await _func.get_data_from_path( sPath )
+        if sRawData is None:
+            print( "Sleep For GetData")
+            _time.sleep(10)
+        else:
+            break;
 
     sFleet_infos = _parse.__xmltree_to_dict( sRawData, 3 )
     sAlianceName = None
@@ -111,7 +121,10 @@ async def getStarsEachFleet( aKey, aFleetID, aNow ):
     for user_info in sFleet_infos.values():
         if sAlianceName is None:
             sAlianceName = user_info['AllianceName']
-            sDesc =  f'No / Get Stars / Name / Trophy'
+            if aTest == True:
+                sDesc =  f'No / Get Stars (Stars Score) / Name / Trophy'
+            else:
+                sDesc =  f'No / Get Stars / Name / Trophy'
             break;
 
     sStarsList = []
@@ -119,8 +132,8 @@ async def getStarsEachFleet( aKey, aFleetID, aNow ):
     for user_info in sFleet_infos.values():
         if sAlianceName is None:
             sAlianceName = user_info['AllianceName']
-
-        sStar, sStarData = _db.getTourneyScores( user_info )
+            
+        sStar, sStarData = _db.getTourneyScores( user_info, aTest )
         sTuple = ( int(sStar), sStarData )
         sStarsList.append(sTuple)
 
@@ -130,6 +143,7 @@ async def getStarsEachFleet( aKey, aFleetID, aNow ):
     for sStars in sStarsList:
         sNum = sNum + 1
         sStarsTxt = sStarsTxt + f'{sNum} / ' + str( sStars[1] ) + '\n'
+        
         if sNum == 30:
             break
 

@@ -127,9 +127,9 @@ async def get_data_from_path(path: str) -> str:
         debug_log( "get_data_from_path", sUrl)
         sRawData = await __get_data_from_url(sUrl)
         if sRawData.find( sErrMsg ) >= 0:
+            sRawData = None;
             print( "get_data_from_path Error Message : " + str( sRawData ) )
 
-   
     return sRawData
 
 
