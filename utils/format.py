@@ -62,8 +62,8 @@ def create_User_Immunity( aNow:datetime, aUserInfo: _type.EntityInfo, aShipInfo:
     sInfosTxt = ''
     if aDetail:
         sInfosTxt = f'{sItalic}{sUnderLine}{sBold}{sName}{sFleet} / {_emojis.trophy}{sTrophy} / {sHeart}{sIsStilLogin} / {_emojis.pss_shield}{sImmunityStr}{sBold}{sUnderLine}{sItalic}' + '\n' + \
-                    f'- 공격 승 / 패 / 무승부 : {sPvpAtkWin} / {sPvpAtkLose} / {sPvpAtkDraw}' + '\n' + \
-                    f'- 방어 승 / 패 / 무승부 : {sPvpDfcWin} / {sPvpDfcLose} / {sPvpDfcDraw}'
+                    f'- Atk Win / Loss / Draw : {sPvpAtkWin} / {sPvpAtkLose} / {sPvpAtkDraw}' + '\n' + \
+                    f'- Def Win / Loss / Draw : {sPvpDfcWin} / {sPvpDfcLose} / {sPvpDfcDraw}'
     else:
         sInfosTxt = f'{sItalic}{sUnderLine}{sBold}{sName}{sFleet} / {_emojis.trophy}{sTrophy} / {sHeart}{sIsStilLogin} / {_emojis.pss_shield}{sImmunityStr}{sBold}{sUnderLine}{sItalic}'
 
@@ -87,6 +87,9 @@ def _get_Immunity( aNow:datetime, aInfo: _type.EntityInfo ) ->datetime:
         sTime = None
         sErrMsg = "ImmunityDate 를 찾을 수 없습니다. 다시한번 시도해보세요."
         
+    print(aInfo['ImmunityDate'])
+    print(sImmunity)
+    
     _func.debug_log( "_get_Immunity", f'Immun : {sImmunity}  Time : {sTime} Now : {aNow}')
 
     return sErrMsg, sTime
@@ -114,3 +117,11 @@ def _get_FleetNClass( aUserInfo: _type.EntityInfo ):
     else:
         sAliance = ""
     return sAliance, sClass
+    
+    
+def create_User_List( aNo: int, aUserInfo: _type.EntityInfo) -> str:
+    sName = aUserInfo['Name']
+    sTrophy = aUserInfo['Trophy']
+    sAliance, _ = _get_FleetNClass( aUserInfo )
+        
+    return f'{aNo}. {sName} {sAliance} {_emojis.trophy} {sTrophy}'

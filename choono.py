@@ -7,6 +7,7 @@ from xml.etree.ElementTree import tostring
 from utils import functions as _func
 from utils import database as db
 from utils import format as _format
+from utils import type as _type
 
 # --------------- Schedule --------------- 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -20,6 +21,7 @@ import pss_ship as _ship
 # --------------- Discord -------------------
 import discord, os
 import asyncio
+from discord import Colour, Embed, Message
 from discord.ext import commands
 from discord.ext.commands import context
 from utils import time as _time
@@ -56,6 +58,12 @@ sRussian.append( { 'Id' : '1228935', 'Name' : 'Taska' } )
 sRussian.append( { 'Id' : '6420614', 'Name' : 'AlfaR1' } )
 sRussian.append( { 'Id' : '3145262', 'Name' : 'Giallar' } )
     
+gUsers = []
+gUsers.append( { 'Id' : '5195724', 'Name' : 'SPACE ENEMY' } )
+gUsers.append( { 'Id' : '919041', 'Name' : 'Stepfeng' } )
+gUsers.append( { 'id' : '4172981', 'Name' : 'Crazy-Joe' } ) 
+gUsers.append( { 'Id' : '8697884', 'Name' : '未来69' } )
+gUsers.append( { 'Id' : '6332617', 'Name' : '西泠印社' } )
 #==============================================================================================
 # Bot Schedule Event Sub Functions
 #==============================================================================================
@@ -65,6 +73,7 @@ async def getListUserInfosByFunction( aUserList, aTitle:str, aIsNeedShipInfo:boo
     sOutputList = ''
     sNow = _time.get_utc_now()
     
+    print(sNow)
     for sUser in aUserList:
         sInfosTxt = None
         sIsLogin = False
@@ -204,19 +213,81 @@ async def getLastDayStarsCmd( aCtx: context ):
             
 
     return
-        
    
+
+def get_User_Alive_Infos( aUserInfos: List[_type.EntityInfo] ):
+    sALiveInfos = {}
+    sInfosTxt = ''
+    sNo = 0
+    for sUserInfo in aUserInfos:
+        sNo = sNo + 1    
+        sALiveInfos[sNo] = sUserInfo['Id']
+        sInfo = _format.create_User_List( sNo, sUserInfo )
+        _func.debug_log( "getUserInfo", sInfo )
+        sInfosTxt = sInfosTxt + sInfo + '\n'
+
+    _func.debug_log( "getUserInfo", f'Number of Users : {sNo}' )
+    return sALiveInfos, sInfosTxt
+     
+
+    
+@gBot.command(name='추노', aliases=['chase'], brief=['추노'] )
+async def chaseListUsersCmd(aCtx: context, aUser: str = None):
+    print("chaseListUsers")
+   
+    sUsers = []
+    
+    if aUser is None:
+        sUsers = gUsers
+    else:
+        sUserInfos = await _user.get_users_infos_by_name( aUser )   
+       
+        sAliveInfos, sAliveInfosTxt = get_User_Alive_Infos( sUserInfos )
+        if len(sUserInfos) > 1:
+            sOutputEmbed = Embed(title=f'{aUser} 유저 리스트', description=sAliveInfosTxt, color=0x00aaaa)
+            sOutputEmbed.set_footer(text="조회를 원하는 유저 번호를 입력해 주세요")
+            sOptMsg = await aCtx.send(embed=sOutputEmbed, mention_author='mention_author')
+            sSelectMsg = await aCtx.bot.wait_for('message', timeout=_time.BOT_REPLY_TIMEOUT_SEC)
+                
+            print(sAliveInfos[int(sSelectMsg.content)])
+            await sOptMsg.delete()
+            
+            sUsers.append( { 'Id' : sAliveInfos[int(sSelectMsg.content)], 'Name' : aUser } )
+        else:
+            print(sUserInfos)
+            print(sUserInfos['Id'])
+            sId = str(sUserInfos['Id'])
+            
+            sUsers.append( { 'Id' : sId, 'Name' : aUser } )
+            
+    print(sUsers)
+        
+    try:
+        sOutputEmbed = await getListUserInfosByFunction( sUsers,
+                                                        f'Rank. Nick(Fleet) / Thropy / Login / Immunity',
+                                                        NEED_SHIP_INFO, 
+                                                        _format.create_User_Immunity )  
+        sOutputEmbed.set_footer(text="Error range : 10 minutes.")
+    except Exception as sERR:
+        sErrTxt = f'에러발생 : {sERR}'
+        sOutputEmbed = discord.Embed(title=f'에러 발생', description=sErrTxt, color=0x00aaaa)   
+        
+    await aCtx.send(embed=sOutputEmbed)
+    
+
 @gBot.event
 async def chaseListUsers():
     print("chaseListUsers")
     sChannel = gBot.get_channel(int(os.environ.get( 'CHOONO_CANNEL_ID' )))
    
     try:
-        sOutputEmbed = await getListUserInfosByFunction( sRussian,
-                                                        f'랭킹. 유저(함대) / 트로피 / 접속 / 보호막',
+        sOutputEmbed = await getListUserInfosByFunction( gUsers,
+                                                        f'Rank. Nick(Fleet) / Thropy / Login / Immunity', 
+                                                        #f'랭킹. 유저(함대) / 트로피 / 접속 / 보호막',
                                                         NEED_SHIP_INFO, 
                                                         _format.create_User_Immunity )  
-        sOutputEmbed.set_footer(text="약 10분 정도 오차가 존재할 수 있습니다.")
+        sOutputEmbed.set_footer(text="Error range : 10 minutes.") 
+        #sOutputEmbed.set_footer(text="약 10분 정도 오차가 존재할 수 있습니다.")
     except Exception as sERR:
         sErrTxt = f'에러발생 : {sERR}'
         sOutputEmbed = discord.Embed(title=f'에러 발생', description=sErrTxt, color=0x00aaaa)   
@@ -236,7 +307,8 @@ async def on_ready():
     sched = AsyncIOScheduler(timezone='UTC')
     sched.start()
     # sched.add_job( getLastDayStars, 'cron', hour='17', minute='17', id="touney_save" )
-    sched.add_job( getLastDayStars, 'cron', hour='23', minute='53', id="touney_save" )
+    sched.add_job( chaseListUsers, 'interval', minutes=3, id="chase" )
+    # sched.add_job( getLastDayStars, 'cron', hour='23', minute='53', id="touney_save" )
     print( 'Tourney Schedule Start' )
     
 
